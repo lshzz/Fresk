@@ -1,9 +1,9 @@
 package com.asterism.fresk.ui.activity;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Window;
 import android.widget.Toast;
 
 import com.asterism.fresk.contract.IBaseContract;
@@ -26,6 +26,8 @@ public abstract class BaseActivity<P extends IBaseContract.Presenter>
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // 隐藏标题栏
+        supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         // 通过实现抽象方法，获取布局ID
         setContentView(setLayoutId());
         // 绑定ButterKnife库
@@ -109,16 +111,6 @@ public abstract class BaseActivity<P extends IBaseContract.Presenter>
     @Override
     public void showNormalToast(String massage) {
         Toasty.normal(this, massage, Toast.LENGTH_SHORT).show();
-    }
-
-    /**
-     * 实现 获取上下文对象
-     *
-     * @return 返回当前View的上下文对象
-     */
-    @Override
-    public Context getContext() {
-        return this;
     }
 
     @Override

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="56dp"
+    android:orientation="vertical">
+
+    <GridView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/gv_bookshelf"
+        android:horizontalSpacing="0dp"
+        android:verticalSpacing="20dp"
+        android:stretchMode="columnWidth"
+        android:numColumns="3"
+        android:gravity="center">
+
+    </GridView>
+
+
+</LinearLayout>

@@ -12,10 +12,14 @@ import android.widget.Toast;
 
 import com.asterism.fresk.contract.IBaseContract;
 
+import java.io.IOException;
+
+import butterknife.ButterKnife;
+import butterknife.Unbinder;
 import es.dmoral.toasty.Toasty;
 
 /**
- * Fragment抽象基类，泛型Presenter基础接口类型，继承自AppCompatActivity，实现View基础接口
+ * Fragment抽象基类，泛型Presenter基础接口类型，继承自Fragment，实现View基础接口
  *
  * @author Ashinch
  * @email Glaxyinfinite@outlook.com
@@ -24,10 +28,11 @@ import es.dmoral.toasty.Toasty;
 public abstract class BaseFragment<P extends IBaseContract.Presenter>
         extends Fragment implements IBaseContract.View {
 
-    protected P mPresenter; // 当前模块中介，子类可用
+    protected P mPresenter; // 当前模块Presenter，子类可用
     protected Context mContext;
     protected View mView;
     protected Bundle mSavedInstanceState;
+    private Unbinder unbinder;
 
     @Nullable
     @Override
@@ -35,6 +40,7 @@ public abstract class BaseFragment<P extends IBaseContract.Presenter>
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         mView = inflater.inflate(setLayoutId(), container, false);
+        unbinder = ButterKnife.bind(this, mView);
         mContext = mView.getContext();
         mSavedInstanceState = savedInstanceState;
         // 实例化Presenter方法
@@ -45,7 +51,13 @@ public abstract class BaseFragment<P extends IBaseContract.Presenter>
         if (this.mPresenter != null) {
             mPresenter.attachView(this);
         }
-        initialize();
+        try {
+            initialize();
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
         return mView;
     }
 
@@ -66,7 +78,7 @@ public abstract class BaseFragment<P extends IBaseContract.Presenter>
     /**
      * 初始化
      */
-    protected abstract void initialize();
+    protected abstract void initialize() throws IOException;
 
     /**
      * 实现 显示错误消息
@@ -116,5 +128,19 @@ public abstract class BaseFragment<P extends IBaseContract.Presenter>
     @Override
     public void showNormalToast(String massage) {
         Toasty.normal(mContext, massage, Toast.LENGTH_SHORT).show();
+    }
+
+    @Nullable
+    @Override
+    public Context getContext() {
+        return mContext;
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (unbinder != null) {
+            unbinder.unbind();
+        }
+        super.onDestroyView();
     }
 }

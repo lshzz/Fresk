@@ -5,7 +5,10 @@
     <color name="colorAccent">#D81B60</color>
 
     <color name="background">#fafafa</color>
-    <color name="Title1">#333333</color>
-    <color name="Title2">#666666</color>
-    <color name="Title3">#999999</color>
+    <color name="title1">#333333</color>
+    <color name="title2">#666666</color>
+    <color name="title3">#999999</color>
+
+    <!--activity_login-->
+    <color name="colorBlack">#000000</color>
 </resources>

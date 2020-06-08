@@ -1,5 +1,7 @@
 package com.asterism.fresk.contract;
 
+import android.content.Context;
+
 import java.io.File;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +19,15 @@ import io.reactivex.Observer;
 public interface IAddBookContract {
 
     interface View extends IBaseContract.View {
+
+        /**
+         * 得到上下文
+         *
+         *
+         * @return 返回上下文
+         */
+        Context GetContext();
+
         /**
          * 显示正在添加
          */
@@ -39,6 +50,8 @@ public interface IAddBookContract {
     }
 
     interface Presenter extends IBaseContract.Presenter<IAddBookContract.View> {
+
+
 
         /**
          * 添加书籍
@@ -76,7 +89,14 @@ public interface IAddBookContract {
          *
          * @param pathList 回调添加失败的书籍文件路径集合
          */
-        void onError(List<String> pathList);
+        void onFailed(List<String> pathList);
+
+        /**
+         * 添加书籍错误事件
+         *
+         * @param message 回调错误消息
+         */
+        void onError(String message);
     }
 
     interface OnGetFilesListener {
@@ -91,8 +111,8 @@ public interface IAddBookContract {
         void onSuccess(List<Map<String, Object>> fileList);
 
         /**
-         * 获取文件信息失败事件
+         * 获取文件信息错误事件
          */
-        void onError();
+        void onError(String message);
     }
 }

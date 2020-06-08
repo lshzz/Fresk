@@ -1,7 +1,9 @@
 package com.asterism.fresk.presenter;
 
 import android.annotation.SuppressLint;
+import android.os.Build;
 import android.os.Environment;
+import android.support.annotation.RequiresApi;
 
 import com.asterism.fresk.R;
 import com.asterism.fresk.contract.IAddBookContract;
@@ -10,11 +12,13 @@ import com.asterism.fresk.dao.BookTypeDao;
 import com.asterism.fresk.dao.bean.BookBean;
 import com.asterism.fresk.dao.bean.BookTypeBean;
 import com.asterism.fresk.util.DateUtils;
+import com.asterism.fresk.util.FileSizeUtil;
 import com.asterism.fresk.util.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,11 +29,11 @@ import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.functions.Consumer;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 
 /**
- * 添加书籍中介类
+ * 添加书籍模块Presenter类，继承base基类且泛型为当前模块View接口类型，并实现当前模块Presenter接口
  *
  * @author Ashinch
  * @email Glaxyinfinite@outlook.com
@@ -51,9 +55,10 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
 
         bookBean.setFilePath(path);
         bookBean.setAddDate(DateUtils.getNowToString());
+        // TODO: 2019-07-11 最后章节与书籍名称后面针对书籍类型需要更改写法
         bookBean.setLastChapter("从未阅读");
         bookBean.setName(FileUtils.getFileSimpleName(path));
-        bookBean.setReadDate(DateUtils.getNowToString());
+        bookBean.setReadDate(new Date());
         bookBean.setReadProgress(0);
         bookBean.setReadTiming(0);
         bookBean.setType(bookTypeBean);
@@ -62,22 +67,27 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
         // 根据不同的类型处理书籍封面
         switch (bookTypeBean.getType()) {
             case "txt":
-                picPath = "android.resource://" + mView.getContext().getPackageName() + "/" + R.raw.txt;
+                picPath = getContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                        .getAbsolutePath() + File.separator + "txt.png";
                 break;
             case "pdf":
-                picPath = "android.resource://" + mView.getContext().getPackageName() + "/" + R.raw.pdf;
+                picPath = getContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                        .getAbsolutePath() + File.separator + "pdf.png";
                 break;
             case "epub":
-                picPath = "android.resource://" + mView.getContext().getPackageName() + "/" + R.raw.epub;
+                picPath = getContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                        .getAbsolutePath() + File.separator + "epub.png";
                 break;
             case "mobi":
-                picPath = "android.resource://" + mView.getContext().getPackageName() + "/" + R.raw.mobi;
+                picPath = getContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+                        .getAbsolutePath() + File.separator + "mobi.png";
                 break;
         }
+
         bookBean.setPicName(picPath);
         return bookBean;
     }
-
+    
     /**
      * 文件扫描递归
      *
@@ -85,7 +95,7 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
      */
     private void fileScan(File Dir, Set<String> typeNameSet, ObservableEmitter<String> emitter) {
         // 初始化书籍类型表访问器
-        BookTypeDao bookTypeDao = new BookTypeDao(mView.getContext());
+        BookTypeDao bookTypeDao = new BookTypeDao(getContext());
         // 获取当前目录内所有文件类型数组
         File[] files = Dir.listFiles();
         // 不为空文件夹时
@@ -98,7 +108,7 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
                 } else if (typeNameSet.contains(FileUtils.getFileSuffixName(file.getName()))
                         && !file.isHidden()) {
                     // 如果该文件是书籍类型且不为隐藏文件时
-                    emitter.onNext(file.getPath() + file.getName());
+                    emitter.onNext(file.getPath());
                 }
             }
         }
@@ -112,18 +122,19 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
      */
     @SuppressLint("CheckResult")
     @Override
-    public void addBooks(final List<String> pathList, final IAddBookContract.OnAddBooksListener listener) {
+    public void addBooks(final List<String> pathList,
+                         final IAddBookContract.OnAddBooksListener listener) {
         // 创建被观察者，传递List<String>类型事件
         Observable<List<String>> observable
                 = Observable.create(new ObservableOnSubscribe<List<String>>() {
             @Override
             public void subscribe(ObservableEmitter<List<String>> emitter) {
                 // 错误路径集合
-                List<String> errorPathList = new ArrayList<>();
+                List<String> failPathList = new ArrayList<>();
                 // 书籍类型表访问器
-                BookTypeDao bookTypeDao = new BookTypeDao(mView.getContext());
+                BookTypeDao bookTypeDao = new BookTypeDao(getContext());
                 // 书籍表访问器
-                BookDao bookDao = new BookDao(mView.getContext());
+                BookDao bookDao = new BookDao(getContext());
 
                 // 遍历路径集合
                 for (String path : pathList) {
@@ -131,16 +142,16 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
                     String suffixName = FileUtils.getFileSuffixName(path);
                     List<BookTypeBean> list = bookTypeDao.selectAllByName(suffixName);
                     // 如果文件类型存在于书籍类型表中
-                    if (list.size() != 0) {
+                    if (list.size() > 0) {
                         // 将书籍添加到数据库
                         bookDao.insert(getBookBean(path, list.get(0)));
                     } else {
                         // 将路径添加到错误路径集合
-                        errorPathList.add(path);
+                        failPathList.add(path);
                     }
                 }
 
-                emitter.onNext(errorPathList);
+                emitter.onNext(failPathList);
                 emitter.onComplete();
             }
         });
@@ -150,14 +161,29 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
                 // 响应于Android主线程
                 .observeOn(AndroidSchedulers.mainThread())
                 // 设置订阅的响应事件
-                .subscribe(new Consumer<List<String>>() {
+                .subscribe(new Observer<List<String>>() {
                     @Override
-                    public void accept(List<String> errorPathList) throws Exception {
+                    public void onSubscribe(Disposable d) {
+
+                    }
+
+                    @Override
+                    public void onNext(List<String> errorPathList) {
                         if (errorPathList.size() == 0) {
                             listener.onSuccess();
                         } else {
-                            listener.onError(errorPathList);
+                            listener.onFailed(errorPathList);
                         }
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        listener.onError(e.getMessage());
+                    }
+
+                    @Override
+                    public void onComplete() {
+
                     }
                 });
     }
@@ -174,6 +200,7 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
         // 被观察者 传递List<Map<String,Object>>类型事件
         Observable<List<Map<String, Object>>> observable
                 = Observable.create(new ObservableOnSubscribe<List<Map<String, Object>>>() {
+            @RequiresApi(api = Build.VERSION_CODES.N)
             @Override
             public void subscribe(ObservableEmitter<List<Map<String, Object>>> emitter) throws Exception {
                 // 先判断当前目录是否存在
@@ -200,14 +227,21 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
 
                 // 获取当前目录内所有文件类型数组
                 File[] currentFiles = currentDir.listFiles();
-                // 初始化列表集合子项集合
-                Map<String, Object> itemMap = new HashMap<>();
+
                 // 初始化书籍类型表访问器
-                BookTypeDao bookTypeDao = new BookTypeDao(mView.getContext());
+                BookTypeDao bookTypeDao = new BookTypeDao(getContext());
+
+                // 初始化列表集合子项集合
+                Map<String, Object> itemMap = null;
 
                 // 遍历当前目录下所有文件
                 for (File file : currentFiles) {
                     String type;
+                    //若为隐藏文件则退出
+                    if(file.isHidden()){
+                        continue;
+                    }
+                    itemMap = new HashMap<>();
                     // 判断类型，如果当前file是文件夹就使用文件夹图标，否则使用书籍文件图标
                     if (file.isDirectory()) {
                         itemMap.put("icon", R.drawable.icon_folder);
@@ -215,14 +249,26 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
                     } else if (bookTypeDao.isExistsByName(FileUtils.getFileSuffixName(file.getName()))) {
                         itemMap.put("icon", R.drawable.icon_file);
                         type = "file";
-                    } else {
+
+                        try {
+                            BookDao dao = new BookDao(mView.GetContext());
+                            // 判断数据库中是否已经拥有此书籍
+                            if( dao.queryIsExistByPath( currentDir.getCanonicalPath() + File.separator + file.getName())){
+                                // 以用于type设置为already_file
+                                type = "already_file";
+                            }
+                        }catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    else {
                         // 除了文件夹和书籍类型文件，其他一律忽略
                         continue;
                     }
 
                     // 记录文件路径
                     try {
-                        itemMap.put("path", currentDir.getCanonicalPath() + "/");
+                       itemMap.put("path", currentDir.getCanonicalPath() + File.separator + file.getName());
                     } catch (IOException e) {
                         e.printStackTrace();
                         mView.showErrorToast(e.getMessage());
@@ -231,6 +277,12 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
                     itemMap.put("name", file.getName());
                     // 记录文件类型
                     itemMap.put("type", type);
+                    //记录文件大小
+                    itemMap.put("size",  FileSizeUtil.getAutoFileOrFilesSize(file.getPath()));
+
+                    //记录文件时间
+                    itemMap.put("time", FileUtils.GetShowFileTime(file));
+
                     // 添加到列表集合
                     itemList.add(itemMap);
                 }
@@ -245,14 +297,25 @@ public class AddBookPresenter extends BasePresenter<IAddBookContract.View>
                 // 响应于Android主线程
                 .observeOn(AndroidSchedulers.mainThread())
                 // 设置订阅的响应事件
-                .subscribe(new Consumer<List<Map<String, Object>>>() {
+                .subscribe(new Observer<List<Map<String, Object>>>() {
                     @Override
-                    public void accept(List<Map<String, Object>> itemList) throws Exception {
-                        if (itemList.size() != 0) {
-                            listener.onSuccess(itemList);
-                        } else {
-                            listener.onError();
-                        }
+                    public void onSubscribe(Disposable d) {
+
+                    }
+
+                    @Override
+                    public void onNext(List<Map<String, Object>> itemList) {
+                        listener.onSuccess(itemList);
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        listener.onError(e.getMessage());
+                    }
+
+                    @Override
+                    public void onComplete() {
+
                     }
                 });
     }

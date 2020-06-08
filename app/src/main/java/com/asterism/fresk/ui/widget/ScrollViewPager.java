@@ -16,6 +16,7 @@ public class ScrollViewPager extends ViewPager {
 
     private boolean mIsCanScroll = true;
 
+
     public ScrollViewPager(Context context) {
         super(context);
     }
@@ -33,11 +34,25 @@ public class ScrollViewPager extends ViewPager {
         this.mIsCanScroll = isCanScroll;
     }
 
+    /**
+     * 重写 拦截触摸事件
+     *
+     * @param ev 动作事件
+     *
+     * @return
+     */
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         return mIsCanScroll && super.onInterceptTouchEvent(ev);
     }
 
+    /**
+     * 重写 触摸事件
+     *
+     * @param ev 动作事件
+     *
+     * @return
+     */
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
         return mIsCanScroll && super.onTouchEvent(ev);
